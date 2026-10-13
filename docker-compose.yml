@@ -1,7 +1,9 @@
 name: shopkaro
 
 x-backend-env: &backend-env
-  DATABASE_URL: postgres://shopkaro:shopkaro@db:5432/shopkaro?sslmode=disable
+  # Set TIGER_DB to a Tiger Data (hosted Timescale) connection string to use
+  # it instead of the local db service.
+  DATABASE_URL: ${TIGER_DB:-postgres://shopkaro:shopkaro@db:5432/shopkaro?sslmode=disable}
   SHOP_NAME: ${SHOP_NAME:-Sharma Kirana Store}
   SHOP_TZ: ${SHOP_TZ:-Asia/Kolkata}
   SUMMARY_LANG: ${SUMMARY_LANG:-en}
