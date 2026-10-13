@@ -35,7 +35,9 @@ services:
       retries: 24
 
   seed:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     entrypoint: ["/app/seed"]
     environment: *backend-env
     depends_on:
@@ -44,7 +46,9 @@ services:
     restart: "no"
 
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       <<: *backend-env
       PORT: "8080"
@@ -63,7 +67,9 @@ services:
       start_period: 10s
 
   web:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     environment:
       API_ORIGIN: http://api:8080
       PORT: "3000"

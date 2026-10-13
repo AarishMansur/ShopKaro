@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+docs
+**/node_modules
+**/.svelte-kit
+**/build
+**/dist
+backend/bin
+**/*.log
+**/.DS_Store

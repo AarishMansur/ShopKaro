@@ -1,10 +1,12 @@
 # syntax=docker/dockerfile:1
+# Build context is the repo root (works for docker compose, Render blueprint
+# and Render's default dashboard builds).
 FROM golang:1.27-alpine AS build
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates tzdata
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
-COPY . .
+COPY backend/ ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
  && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/seed ./cmd/seed
 

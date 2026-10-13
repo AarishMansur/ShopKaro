@@ -8,7 +8,7 @@ services:
     name: shopkaro-api
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerContext: .
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
@@ -40,7 +40,7 @@ services:
     name: shopkaro-web
     runtime: docker
     dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
+    dockerContext: .
     healthCheckPath: /
     autoDeploy: true
     envVars:

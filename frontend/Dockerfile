@@ -1,9 +1,11 @@
 # syntax=docker/dockerfile:1
+# Build context is the repo root (works for docker compose, Render blueprint
+# and Render's default dashboard builds).
 FROM node:24-alpine AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
-COPY . .
+COPY frontend/ ./
 RUN npm run check && npm run build
 
 FROM node:24-alpine
