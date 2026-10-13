@@ -1,0 +1,55 @@
+# Render blueprint — deploys the whole stack in ~5 minutes:
+#   1. Fork the repo, then "New +" → "Blueprint" in Render and point it here.
+#   2. Render provisions Postgres, builds both images and runs the idempotent
+#      demo seed on first boot (44 products, 10 weeks of sales history).
+#   3. Open the shopkaro-web URL and start tapping sales.
+services:
+  - type: web
+    name: shopkaro-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: shopkaro-db
+          property: connectionString
+      - key: SHOP_NAME
+        value: Sharma Kirana Store
+      - key: SHOP_TZ
+        value: Asia/Kolkata
+      - key: SUMMARY_LANG
+        value: en
+      # Optional partner integrations — leave empty for graceful fallbacks:
+      - key: OLLAMA_URL
+        value: ""
+      - key: GEMMA_MODEL
+        value: gemma3:4b
+      - key: WHISPER_URL
+        value: ""
+      - key: TABPFN_BASE_URL
+        value: https://api.priorlabs.ai
+      - key: TABPFN_API_KEY
+        sync: false
+      - key: TEMPORAL_ENABLED
+        value: "false"
+
+  - type: web
+    name: shopkaro-web
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      # Render injects PORT at runtime; adapter-node listens on it.
+      # Update this URL if you rename the shopkaro-api service above.
+      - key: API_ORIGIN
+        value: https://shopkaro-api.onrender.com
+
+databases:
+  - name: shopkaro-db
+    databaseName: shopkaro
+    user: shopkaro
