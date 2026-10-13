@@ -1,0 +1,17 @@
+{
+  "name": "ShopKaro",
+  "short_name": "ShopKaro",
+  "description": "Tap-to-sell billing for Indian kirana shops",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f5",
+  "theme_color": "#0e7a5f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
