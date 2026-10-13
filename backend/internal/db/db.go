@@ -54,6 +54,9 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	// TimescaleDB / Tiger Data: turn sales into a hypertable when available so
 	// time-range aggregates get chunk exclusion. Plain Postgres skips this.
+	// The extension must be created explicitly; on vanilla Postgres (or managed
+	// instances without it) the statement fails and we move on.
+	_, _ = pool.Exec(ctx, `CREATE EXTENSION IF NOT EXISTS timescaledb`)
 	var hasTS bool
 	err = pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'timescaledb')`).Scan(&hasTS)
 	if err == nil && hasTS {

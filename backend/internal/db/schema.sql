@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE INDEX IF NOT EXISTS idx_products_active ON products (active, sort_order, name);
 
 CREATE TABLE IF NOT EXISTS sales (
-    id          BIGSERIAL PRIMARY KEY,
+    id          BIGSERIAL,
     client_id   TEXT NOT NULL,
     product_id  BIGINT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
     qty         INT NOT NULL CHECK (qty > 0),
@@ -27,7 +27,10 @@ CREATE TABLE IF NOT EXISTS sales (
     total       DOUBLE PRECISION NOT NULL,
     source      TEXT NOT NULL DEFAULT 'tap',
     sold_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Composite key keeps sold_at in the primary key so TimescaleDB / Tiger
+    -- Data can turn sales into a hypertable.
+    PRIMARY KEY (id, sold_at)
 );
 
 CREATE INDEX IF NOT EXISTS idx_sales_sold_at ON sales (sold_at DESC);
