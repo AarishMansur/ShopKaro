@@ -1,0 +1,148 @@
+name: shopkaro
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgres://shopkaro:shopkaro@db:5432/shopkaro?sslmode=disable
+  SHOP_NAME: ${SHOP_NAME:-Sharma Kirana Store}
+  SHOP_TZ: ${SHOP_TZ:-Asia/Kolkata}
+  SUMMARY_LANG: ${SUMMARY_LANG:-en}
+  OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+  GEMMA_MODEL: ${GEMMA_MODEL:-gemma3:4b}
+  GEMMA_VISION_MODEL: ${GEMMA_VISION_MODEL:-}
+  WHISPER_URL: ${WHISPER_URL:-}
+  TABPFN_BASE_URL: ${TABPFN_BASE_URL:-}
+  TABPFN_API_KEY: ${TABPFN_API_KEY:-}
+  TEMPORAL_ENABLED: ${TEMPORAL_ENABLED:-false}
+  TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal:7233}
+  TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: shopkaro
+      POSTGRES_PASSWORD: shopkaro
+      POSTGRES_DB: shopkaro
+    ports:
+      - "${DB_PORT:-15432}:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopkaro -d shopkaro"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+  seed:
+    build: ./backend
+    entrypoint: ["/app/seed"]
+    environment: *backend-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: ./backend
+    environment:
+      <<: *backend-env
+      PORT: "8080"
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 10s
+
+  web:
+    build: ./frontend
+    environment:
+      API_ORIGIN: http://api:8080
+      PORT: "3000"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # --- optional profile: ai (Gemma vision/LLM via Ollama + Whisper voice) ---
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ai"]
+    volumes:
+      - ollamadata:/root/.ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    profiles: ["ai"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull ${GEMMA_MODEL:-gemma3:4b}"]
+    restart: "no"
+
+  whisper:
+    build: ./services/whisper
+    profiles: ["ai"]
+    ports:
+      - "${WHISPER_PORT:-9000}:9000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request;urllib.request.urlopen('http://127.0.0.1:9000/healthz')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # --- optional profile: temporal (durable scheduled jobs) ---
+  temporal:
+    image: temporalio/auto-setup:latest
+    profiles: ["temporal"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: shopkaro
+      POSTGRES_PWD: shopkaro
+      POSTGRES_SEEDS: db
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    profiles: ["temporal"]
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "${TEMPORAL_UI_PORT:-8088}:8080"
+
+volumes:
+  dbdata:
+  ollamadata:
